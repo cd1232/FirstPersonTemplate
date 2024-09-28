@@ -1,7 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "FirstPersonCharacter.h"
-#include "FirstPersonProjectile.h"
+
 #include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -11,10 +11,10 @@
 #include "InputActionValue.h"
 #include "Engine/LocalPlayer.h"
 
-DEFINE_LOG_CATEGORY(LogTemplateCharacter);
+#include "FirstPersonProjectile.h"
+#include "InteractionComponent.h"
 
-//////////////////////////////////////////////////////////////////////////
-// AFirstPersonCharacter
+DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 AFirstPersonCharacter::AFirstPersonCharacter()
 {
@@ -33,9 +33,9 @@ AFirstPersonCharacter::AFirstPersonCharacter()
 	Mesh1P->SetupAttachment(FirstPersonCameraComponent);
 	Mesh1P->bCastDynamicShadow = false;
 	Mesh1P->CastShadow = false;
-	//Mesh1P->SetRelativeRotation(FRotator(0.9f, -19.19f, 5.2f));
 	Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
 
+	InteractionComponent = CreateDefaultSubobject<UInteractionComponent>(TEXT("InteractionComponent"));
 }
 
 void AFirstPersonCharacter::BeginPlay()
@@ -51,15 +51,14 @@ void AFirstPersonCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		// Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
-
 		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AFirstPersonCharacter::Move);
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AFirstPersonCharacter::Look);
+
+		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Triggered, this, &AFirstPersonCharacter::Interact);
+		EnhancedInputComponent->BindAction(CancelInteractAction, ETriggerEvent::Triggered, this, &AFirstPersonCharacter::CancelInteraction);
 	}
 	else
 	{
@@ -70,6 +69,9 @@ void AFirstPersonCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 
 void AFirstPersonCharacter::Move(const FInputActionValue& Value)
 {
+	if (InteractionComponent->IsInteracting())
+		return;
+
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
@@ -83,6 +85,9 @@ void AFirstPersonCharacter::Move(const FInputActionValue& Value)
 
 void AFirstPersonCharacter::Look(const FInputActionValue& Value)
 {
+	if (InteractionComponent->IsInteracting())
+		return;
+
 	// input is a Vector2D
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 
@@ -92,4 +97,17 @@ void AFirstPersonCharacter::Look(const FInputActionValue& Value)
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
+}
+
+void AFirstPersonCharacter::Interact(const FInputActionValue& Value)
+{
+	if (InteractionComponent->IsInteracting())
+		return;
+
+	InteractionComponent->StartInteraction();
+}
+
+void AFirstPersonCharacter::CancelInteraction(const FInputActionValue& Value)
+{
+	InteractionComponent->CancelInteraction();
 }

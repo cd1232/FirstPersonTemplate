@@ -5,6 +5,11 @@
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
 
+UPlayerHUDWidget* AFirstPersonPlayerController::GetPlayerHUD() const
+{
+	return PlayerHUD;
+}
+
 void AFirstPersonPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
